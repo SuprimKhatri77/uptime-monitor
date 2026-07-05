@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -15,7 +16,7 @@ import (
 	db "github.com/suprimkhatri77/uptime-monitor/api/internal/database/generated"
 	"github.com/suprimkhatri77/uptime-monitor/api/internal/packages/handlerlog"
 	"github.com/suprimkhatri77/uptime-monitor/api/internal/repository"
-	"github.com/suprimkhatri77/uptime-monitor/api/internal/respond"
+	"github.com/suprimkhatri77/uptime-monitor/api/internal/types"
 	"github.com/suprimkhatri77/uptime-monitor/api/internal/utils"
 )
 
@@ -29,7 +30,7 @@ func Refresh(queries repository.AuthRepository, cfg *config.Config) gin.HandlerF
 
 			utils.ClearAuthCookies(c, cfg)
 
-			respond.BadRequest(c, "Missing refresh token", constants.TokenNotProvided)
+			c.JSON(http.StatusBadRequest, types.Error("Missing refresh token", constants.TokenNotProvided))
 			return
 		}
 
@@ -46,7 +47,7 @@ func Refresh(queries repository.AuthRepository, cfg *config.Config) gin.HandlerF
 
 			utils.ClearAuthCookies(c, cfg)
 
-			respond.Unauthorized(c, "Invalid refresh token", constants.TokenInvalid)
+			c.JSON(http.StatusUnauthorized, types.Error("Invalid refresh token", constants.TokenInvalid))
 			return
 		}
 
@@ -54,7 +55,7 @@ func Refresh(queries repository.AuthRepository, cfg *config.Config) gin.HandlerF
 		if !ok {
 			handlerlog.Warn(c, "invalid token claims")
 
-			respond.Unauthorized(c, "Invalid token", constants.InvalidToken)
+			c.JSON(http.StatusUnauthorized, types.Error("Invalid token", constants.InvalidToken))
 			return
 		}
 
@@ -62,7 +63,7 @@ func Refresh(queries repository.AuthRepository, cfg *config.Config) gin.HandlerF
 		if !ok {
 			utils.ClearAuthCookies(c, cfg)
 
-			respond.Unauthorized(c, "Invalid token claims", constants.InvalidToken)
+			c.JSON(http.StatusUnauthorized, types.Error("Invalid token claims", constants.InvalidToken))
 			return
 		}
 
@@ -72,28 +73,25 @@ func Refresh(queries repository.AuthRepository, cfg *config.Config) gin.HandlerF
 		if err != nil {
 			utils.ClearAuthCookies(c, cfg)
 
-			respond.Unauthorized(c, "Invalid token claims", constants.InvalidToken)
+			c.JSON(http.StatusUnauthorized, types.Error("Invalid token claims", constants.InvalidToken))
 			return
 		}
 
 		refreshTokenHash := sha256.Sum256([]byte(refreshTokenString))
 		refreshTokenHashString := fmt.Sprintf("%x", refreshTokenHash)
 
-		refreshToken, err := queries.GetRefreshTokenBySessionIDAndToken(ctx, db.GetRefreshTokenBySessionIDAndTokenParams{
-			SessionID: sessionID,
-			Token:     refreshTokenHashString,
-		})
+		refreshToken, err := queries.GetRefreshTokenByHash(ctx, refreshTokenHashString)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 
 				utils.ClearAuthCookies(c, cfg)
-				respond.Unauthorized(c, "Invalid refresh token", constants.TokenInvalid)
+				c.JSON(http.StatusUnauthorized, types.Error("Invalid refresh token", constants.TokenInvalid))
 				return
 			}
 
 			handlerlog.Error(c, "failed to fetch refresh token", err)
 
-			respond.InternalError(c, "Something went wrong")
+			c.JSON(http.StatusInternalServerError, types.Error("Something went wrong", constants.InternalServerError))
 			return
 		}
 
@@ -101,17 +99,17 @@ func Refresh(queries repository.AuthRepository, cfg *config.Config) gin.HandlerF
 		if err != nil {
 			handlerlog.Error(c, "failed to fetch user", err, "user_id", refreshToken.UserID)
 
-			respond.InternalError(c, "Failed to process request")
+			c.JSON(http.StatusInternalServerError, types.Error("Failed to process request", constants.InternalServerError))
 			return
 		}
 
 		accessClaims := jwt.MapClaims{
-			"userID":   user.ID,
-			"role":     user.Role,
-			"email":    user.Email,
-			"name":     user.Name,
-			"imageURL": user.ImageUrl,
-			"exp":      time.Now().Add(15 * time.Minute).Unix(),
+			"user_id":    user.ID,
+			"role":       user.Role,
+			"email":      user.Email,
+			"name":       user.Name,
+			"avatar_url": user.AvatarUrl,
+			"exp":        time.Now().Add(15 * time.Minute).Unix(),
 		}
 
 		accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
@@ -119,24 +117,21 @@ func Refresh(queries repository.AuthRepository, cfg *config.Config) gin.HandlerF
 		if err != nil {
 			handlerlog.Error(c, "failed to sign access token", err, "user_id", user.ID)
 
-			respond.InternalError(c, "Failed to process request")
+			c.JSON(http.StatusInternalServerError, types.Error("Failed to process request", constants.InternalServerError))
 			return
 		}
 
 		if time.Since(refreshToken.CreatedAt.Time) < 5*time.Minute {
 			utils.SetAuthCookie(c, "access_token", accessTokenString, 15*60, cfg)
-			respond.OKMessage(c, "Access token refreshed")
+			c.JSON(http.StatusOK, types.Success("Access token refreshed", nil))
 			return
 		}
 
-		_, err = queries.RevokeTokenBySessionIDAndToken(ctx, db.RevokeTokenBySessionIDAndTokenParams{
-			SessionID: sessionID,
-			Token:     refreshTokenHashString,
-		})
+		err = queries.RevokeRefreshToken(ctx, refreshTokenHashString)
 		if err != nil {
 			handlerlog.Error(c, "failed to revoke refresh token", err, "user_id", refreshToken.UserID)
 
-			respond.InternalError(c, "Failed to process request")
+			c.JSON(http.StatusInternalServerError, types.Error("Failed to process request", constants.InternalServerError))
 			return
 		}
 
@@ -151,26 +146,25 @@ func Refresh(queries repository.AuthRepository, cfg *config.Config) gin.HandlerF
 		if err != nil {
 			handlerlog.Error(c, "failed to sign refresh token", err, "user_id", user.ID)
 
-			respond.InternalError(c, "Failed to process request")
+			c.JSON(http.StatusInternalServerError, types.Error("Failed to process request", constants.InternalServerError))
 			return
 		}
 
 		newHash := sha256.Sum256([]byte(newRefreshTokenString))
 		newTokenHash := fmt.Sprintf("%x", newHash)
 
-		_, err = queries.CreateToken(ctx, db.CreateTokenParams{
-			UserID: user.ID,
-			Token:  newTokenHash,
+		_, err = queries.CreateRefreshToken(ctx, db.CreateRefreshTokenParams{
+			UserID:    user.ID,
+			TokenHash: newTokenHash,
 			ExpiresAt: pgtype.Timestamptz{
 				Time:  time.Now().Add(30 * 24 * time.Hour),
 				Valid: true,
 			},
-			SessionID: sessionID,
 		})
 		if err != nil {
 			handlerlog.Error(c, "failed to persist new refresh token", err, "user_id", user.ID)
 
-			respond.InternalError(c, "Failed to process request")
+			c.JSON(http.StatusInternalServerError, types.Error("Failed to process request", constants.InternalServerError))
 			return
 		}
 
@@ -180,6 +174,6 @@ func Refresh(queries repository.AuthRepository, cfg *config.Config) gin.HandlerF
 
 		handlerlog.Info(c, "tokens rotated successfully", "user_id", user.ID)
 
-		respond.OKMessage(c, "Tokens refreshed")
+		c.JSON(http.StatusOK, types.Success("Tokens refreshed", nil))
 	}
 }

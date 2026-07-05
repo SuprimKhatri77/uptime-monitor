@@ -8,103 +8,50 @@ package db
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const countUsers = `-- name: CountUsers :one
-SELECT COUNT(*) FROM users
-WHERE
-  (
-    $1::TEXT IS NULL
-    OR name  ILIKE '%' || $1::TEXT || '%'
-    OR email ILIKE '%' || $1::TEXT || '%'
-  )
-  AND (
-    $2::TEXT IS NULL
-    OR role = $2::TEXT
-  )
-`
-
-type CountUsersParams struct {
-	Q    pgtype.Text `json:"q"`
-	Role pgtype.Text `json:"role"`
-}
-
-func (q *Queries) CountUsers(ctx context.Context, arg CountUsersParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countUsers, arg.Q, arg.Role)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (
-  name,
-  email,
-  password_hash,
-  role,
-  image_url
-) VALUES (
-  $1, $2, $3, $4, $5
-)
-RETURNING id, name, email, password_hash, role, image_url, created_at, updated_at
+INSERT INTO core.users (email, name, avatar_url)
+VALUES ($1, $2, $3)
+RETURNING id, email, name, avatar_url, role, created_at, updated_at
 `
 
 type CreateUserParams struct {
-	Name         string      `json:"name"`
-	Email        string      `json:"email"`
-	PasswordHash string      `json:"-"`
-	Role         string      `json:"role"`
-	ImageUrl     pgtype.Text `json:"image_url"`
+	Email     string      `json:"email"`
+	Name      pgtype.Text `json:"name"`
+	AvatarUrl pgtype.Text `json:"avatar_url"`
 }
 
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, createUser,
-		arg.Name,
-		arg.Email,
-		arg.PasswordHash,
-		arg.Role,
-		arg.ImageUrl,
-	)
-	var i User
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CoreUser, error) {
+	row := q.db.QueryRow(ctx, createUser, arg.Email, arg.Name, arg.AvatarUrl)
+	var i CoreUser
 	err := row.Scan(
 		&i.ID,
-		&i.Name,
 		&i.Email,
-		&i.PasswordHash,
+		&i.Name,
+		&i.AvatarUrl,
 		&i.Role,
-		&i.ImageUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
 }
 
-const deleteUser = `-- name: DeleteUser :execresult
-DELETE FROM users
-WHERE id = $1
-`
-
-func (q *Queries) DeleteUser(ctx context.Context, id pgtype.UUID) (pgconn.CommandTag, error) {
-	return q.db.Exec(ctx, deleteUser, id)
-}
-
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, name, email, password_hash, role, image_url, created_at, updated_at FROM users
+SELECT id, email, name, avatar_url, role, created_at, updated_at FROM core.users
 WHERE email = $1
 `
 
-func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (CoreUser, error) {
 	row := q.db.QueryRow(ctx, getUserByEmail, email)
-	var i User
+	var i CoreUser
 	err := row.Scan(
 		&i.ID,
-		&i.Name,
 		&i.Email,
-		&i.PasswordHash,
+		&i.Name,
+		&i.AvatarUrl,
 		&i.Role,
-		&i.ImageUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -112,150 +59,21 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, name, email, password_hash, role, image_url, created_at, updated_at FROM users
+SELECT id, email, name, avatar_url, role, created_at, updated_at FROM core.users
 WHERE id = $1
 `
 
-func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (User, error) {
+func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (CoreUser, error) {
 	row := q.db.QueryRow(ctx, getUserByID, id)
-	var i User
+	var i CoreUser
 	err := row.Scan(
 		&i.ID,
-		&i.Name,
 		&i.Email,
-		&i.PasswordHash,
+		&i.Name,
+		&i.AvatarUrl,
 		&i.Role,
-		&i.ImageUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
-}
-
-const listUsers = `-- name: ListUsers :many
-SELECT
-  id, name, email, role, image_url, created_at, updated_at
-FROM users
-WHERE
-  (
-    $1::TEXT IS NULL
-    OR name  ILIKE '%' || $1::TEXT || '%'
-    OR email ILIKE '%' || $1::TEXT || '%'
-  )
-  AND (
-    $2::TEXT IS NULL
-    OR role = $2::TEXT
-  )
-ORDER BY created_at DESC
-LIMIT  $4::INT
-OFFSET $3::INT
-`
-
-type ListUsersParams struct {
-	Q      pgtype.Text `json:"q"`
-	Role   pgtype.Text `json:"role"`
-	Offset pgtype.Int4 `json:"offset"`
-	Limit  pgtype.Int4 `json:"limit"`
-}
-
-type ListUsersRow struct {
-	ID        pgtype.UUID        `json:"id"`
-	Name      string             `json:"name"`
-	Email     string             `json:"email"`
-	Role      string             `json:"role"`
-	ImageUrl  pgtype.Text        `json:"image_url"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
-}
-
-func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error) {
-	rows, err := q.db.Query(ctx, listUsers,
-		arg.Q,
-		arg.Role,
-		arg.Offset,
-		arg.Limit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListUsersRow
-	for rows.Next() {
-		var i ListUsersRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Email,
-			&i.Role,
-			&i.ImageUrl,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const updateUser = `-- name: UpdateUser :one
-UPDATE users SET
-  name      = COALESCE($2::TEXT,      name),
-  email     = COALESCE($3::TEXT,     email),
-  role      = COALESCE($4::TEXT,      role),
-  image_url = COALESCE($5::TEXT, image_url)
-WHERE id = $1
-RETURNING id, name, email, password_hash, role, image_url, created_at, updated_at
-`
-
-type UpdateUserParams struct {
-	ID       pgtype.UUID `json:"id"`
-	Name     pgtype.Text `json:"name"`
-	Email    pgtype.Text `json:"email"`
-	Role     pgtype.Text `json:"role"`
-	ImageUrl pgtype.Text `json:"image_url"`
-}
-
-func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, updateUser,
-		arg.ID,
-		arg.Name,
-		arg.Email,
-		arg.Role,
-		arg.ImageUrl,
-	)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Email,
-		&i.PasswordHash,
-		&i.Role,
-		&i.ImageUrl,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const updateUserPassword = `-- name: UpdateUserPassword :one
-UPDATE users SET
-  password_hash = $2
-WHERE id = $1
-RETURNING id
-`
-
-type UpdateUserPasswordParams struct {
-	ID           pgtype.UUID `json:"id"`
-	PasswordHash string      `json:"-"`
-}
-
-func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) (pgtype.UUID, error) {
-	row := q.db.QueryRow(ctx, updateUserPassword, arg.ID, arg.PasswordHash)
-	var id pgtype.UUID
-	err := row.Scan(&id)
-	return id, err
 }

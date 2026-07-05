@@ -2,10 +2,11 @@ package middleware
 
 import (
 	"log/slog"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/suprimkhatri77/uptime-monitor/api/internal/constants"
-	"github.com/suprimkhatri77/uptime-monitor/api/internal/respond"
+	"github.com/suprimkhatri77/uptime-monitor/api/internal/types"
 )
 
 func RequireRole(roles ...string) gin.HandlerFunc {
@@ -24,6 +25,7 @@ func RequireRole(roles ...string) gin.HandlerFunc {
 
 		slog.Info("invalid role")
 
-		respond.ForbiddenAbort(c, "Insufficient permissions", constants.Forbidden)
+		c.JSON(http.StatusForbidden, types.Error("Insufficient permissions", constants.Forbidden))
+		c.Abort()
 	}
 }

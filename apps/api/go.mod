@@ -1,6 +1,6 @@
 module github.com/suprimkhatri77/uptime-monitor/api
 
-go 1.22
+go 1.25.0
 
 require (
 	github.com/cloudinary/cloudinary-go/v2 v2.16.0
@@ -42,6 +42,7 @@ require (
 	github.com/ugorji/go/codec v1.2.12 // indirect
 	golang.org/x/arch v0.8.0 // indirect
 	golang.org/x/net v0.25.0 // indirect
+	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/sys v0.25.0 // indirect
 	golang.org/x/text v0.18.0 // indirect
