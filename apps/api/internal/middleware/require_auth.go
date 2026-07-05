@@ -3,12 +3,13 @@ package middleware
 import (
 	"fmt"
 	"log/slog"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/suprimkhatri77/uptime-monitor/api/internal/config"
 	"github.com/suprimkhatri77/uptime-monitor/api/internal/constants"
-	"github.com/suprimkhatri77/uptime-monitor/api/internal/respond"
+	"github.com/suprimkhatri77/uptime-monitor/api/internal/types"
 )
 
 func RequireAuth(cfg *config.Config) gin.HandlerFunc {
@@ -20,7 +21,8 @@ func RequireAuth(cfg *config.Config) gin.HandlerFunc {
 				"ip", c.ClientIP(),
 			)
 
-			respond.UnauthorizedAbort(c, "Missing access token", constants.TokenNotProvided)
+			c.JSON(http.StatusUnauthorized, types.Error("Missing access token", constants.TokenNotProvided))
+			c.Abort()
 			return
 		}
 
@@ -41,7 +43,8 @@ func RequireAuth(cfg *config.Config) gin.HandlerFunc {
 				"ip", c.ClientIP(),
 			)
 
-			respond.UnauthorizedAbort(c, "Invalid access token", constants.TokenInvalid)
+			c.JSON(http.StatusUnauthorized, types.Error("Invalid access token", constants.TokenInvalid))
+			c.Abort()
 			return
 		}
 
@@ -52,7 +55,8 @@ func RequireAuth(cfg *config.Config) gin.HandlerFunc {
 				"ip", c.ClientIP(),
 			)
 
-			respond.UnauthorizedAbort(c, "Invalid token claims", constants.Unauthorized)
+			c.JSON(http.StatusUnauthorized, types.Error("Invalid token claims", constants.Unauthorized))
+			c.Abort()
 			return
 		}
 
@@ -63,7 +67,8 @@ func RequireAuth(cfg *config.Config) gin.HandlerFunc {
 				"ip", c.ClientIP(),
 			)
 
-			respond.UnauthorizedAbort(c, "Invalid token claims", constants.Unauthorized)
+			c.JSON(http.StatusUnauthorized, types.Error("Invalid token claims", constants.Unauthorized))
+			c.Abort()
 			return
 		}
 
@@ -76,7 +81,8 @@ func RequireAuth(cfg *config.Config) gin.HandlerFunc {
 				"ip", c.ClientIP(),
 			)
 
-			respond.UnauthorizedAbort(c, "Invalid token claims", constants.Unauthorized)
+			c.JSON(http.StatusUnauthorized, types.Error("Invalid token claims", constants.Unauthorized))
+			c.Abort()
 			return
 		}
 

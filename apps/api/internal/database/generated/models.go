@@ -8,23 +8,72 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type Token struct {
+type CoreAccount struct {
+	ID                pgtype.UUID        `json:"id"`
+	UserID            pgtype.UUID        `json:"user_id"`
+	Provider          string             `json:"provider"`
+	ProviderAccountID string             `json:"provider_account_id"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+}
+
+type CoreRefreshToken struct {
 	ID        pgtype.UUID        `json:"id"`
 	UserID    pgtype.UUID        `json:"user_id"`
-	Token     string             `json:"token"`
-	SessionID pgtype.UUID        `json:"session_id"`
+	TokenHash string             `json:"token_hash"`
+	Revoked   bool               `json:"revoked"`
 	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
-	RevokedAt pgtype.Timestamptz `json:"revoked_at"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
-type User struct {
-	ID           pgtype.UUID        `json:"id"`
-	Name         string             `json:"name"`
-	Email        string             `json:"email"`
-	PasswordHash string             `json:"-"`
-	Role         string             `json:"role"`
-	ImageUrl     pgtype.Text        `json:"image_url"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+type CoreSubscription struct {
+	ID                   pgtype.UUID        `json:"id"`
+	TenantID             pgtype.UUID        `json:"tenant_id"`
+	StripeCustomerID     string             `json:"stripe_customer_id"`
+	StripeSubscriptionID string             `json:"stripe_subscription_id"`
+	Status               string             `json:"status"`
+	Plan                 string             `json:"plan"`
+	CurrentPeriodEnd     pgtype.Timestamptz `json:"current_period_end"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
+}
+
+type CoreTenant struct {
+	ID          pgtype.UUID        `json:"id"`
+	Slug        string             `json:"slug"`
+	Name        string             `json:"name"`
+	OwnerUserID pgtype.UUID        `json:"owner_user_id"`
+	Status      string             `json:"status"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type CoreTenantInvite struct {
+	ID        pgtype.UUID        `json:"id"`
+	TenantID  pgtype.UUID        `json:"tenant_id"`
+	Code      string             `json:"code"`
+	Role      string             `json:"role"`
+	InvitedBy pgtype.UUID        `json:"invited_by"`
+	MaxUses   int32              `json:"max_uses"`
+	UsesCount int32              `json:"uses_count"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+	Revoked   bool               `json:"revoked"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type CoreTenantMember struct {
+	ID        pgtype.UUID        `json:"id"`
+	TenantID  pgtype.UUID        `json:"tenant_id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	Role      string             `json:"role"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type CoreUser struct {
+	ID        pgtype.UUID        `json:"id"`
+	Email     string             `json:"email"`
+	Name      pgtype.Text        `json:"name"`
+	AvatarUrl pgtype.Text        `json:"avatar_url"`
+	Role      string             `json:"role"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }

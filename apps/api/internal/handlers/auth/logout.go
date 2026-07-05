@@ -3,15 +3,15 @@ package auth
 import (
 	"crypto/sha256"
 	"fmt"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/suprimkhatri77/uptime-monitor/api/internal/config"
 	"github.com/suprimkhatri77/uptime-monitor/api/internal/constants"
-	db "github.com/suprimkhatri77/uptime-monitor/api/internal/database/generated"
 	"github.com/suprimkhatri77/uptime-monitor/api/internal/packages/handlerlog"
 	"github.com/suprimkhatri77/uptime-monitor/api/internal/repository"
-	"github.com/suprimkhatri77/uptime-monitor/api/internal/respond"
+	"github.com/suprimkhatri77/uptime-monitor/api/internal/types"
 	"github.com/suprimkhatri77/uptime-monitor/api/internal/utils"
 )
 
@@ -23,7 +23,7 @@ func Logout(queries repository.AuthRepository, cfg *config.Config) gin.HandlerFu
 		if err != nil {
 			handlerlog.Warn(c, "missing refresh token on logout")
 
-			respond.Unauthorized(c, "Missing refresh token", constants.TokenNotProvided)
+			c.JSON(http.StatusUnauthorized, types.Error("Missing refresh token", constants.TokenNotProvided))
 			return
 		}
 
@@ -38,40 +38,18 @@ func Logout(queries repository.AuthRepository, cfg *config.Config) gin.HandlerFu
 		if err != nil || !token.Valid {
 			handlerlog.Warn(c, "invalid refresh token on logout", "error", err)
 
-			respond.Unauthorized(c, "Invalid refresh token", constants.TokenInvalid)
-			return
-		}
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok {
-			handlerlog.Warn(c, "invalid token claims")
-
-			respond.Unauthorized(c, "Invalid token", constants.InvalidToken)
-			return
-		}
-
-		sessionIDFromClaims, ok := claims["session_id"].(string)
-		if !ok {
-			respond.Unauthorized(c, "Invalid token claims", constants.InvalidToken)
-			return
-		}
-
-		sessionID, err := utils.ConvertToUUID(sessionIDFromClaims)
-		if err != nil {
-			respond.Unauthorized(c, "Invalid token claims", constants.InvalidToken)
+			c.JSON(http.StatusUnauthorized, types.Error("Invalid refresh token", constants.TokenInvalid))
 			return
 		}
 
 		hash := sha256.Sum256([]byte(refreshTokenFromCookie))
 		tokenHash := fmt.Sprintf("%x", hash)
 
-		_, err = queries.RevokeTokenBySessionIDAndToken(ctx, db.RevokeTokenBySessionIDAndTokenParams{
-			Token:     tokenHash,
-			SessionID: sessionID,
-		})
+		err = queries.RevokeRefreshToken(ctx, tokenHash)
 		if err != nil {
 			handlerlog.Error(c, "failed to revoke refresh token on logout", err)
 
-			respond.InternalError(c, "Failed to logout")
+			c.JSON(http.StatusInternalServerError, types.Error("Failed to logout", constants.InternalServerError))
 			return
 		}
 
@@ -79,8 +57,6 @@ func Logout(queries repository.AuthRepository, cfg *config.Config) gin.HandlerFu
 		utils.SetAuthCookie(c, "refresh_token", "", -1, cfg)
 		utils.SetPublicCookie(c, "is_logged_in", "", -1, cfg)
 
-		handlerlog.Info(c, "user logged out")
-
-		respond.OKMessage(c, "Logged out successfully")
+		c.JSON(http.StatusOK, types.Success("Logged out successfully", nil))
 	}
 }
