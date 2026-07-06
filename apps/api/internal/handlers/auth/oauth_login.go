@@ -9,7 +9,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/suprimkhatri77/uptime-monitor/api/internal/config"
 	"github.com/suprimkhatri77/uptime-monitor/api/internal/constants"
-	"github.com/suprimkhatri77/uptime-monitor/api/internal/packages/handlerlog"
 	"github.com/suprimkhatri77/uptime-monitor/api/internal/types"
 	"github.com/suprimkhatri77/uptime-monitor/api/internal/utils"
 )
@@ -42,8 +41,6 @@ func GithubLoginHandler(cfg *config.Config) gin.HandlerFunc {
 		params.Set("state", state)
 
 		authURL := "https://github.com/login/oauth/authorize?" + params.Encode()
-
-		handlerlog.Info(c, "REDIRECTING TO: ", authURL)
 
 		c.Redirect(http.StatusTemporaryRedirect, authURL)
 	}

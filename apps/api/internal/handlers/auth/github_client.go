@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/suprimkhatri77/uptime-monitor/api/internal/config"
 )
@@ -37,7 +38,12 @@ func exchangeCodeForToken(ctx context.Context, cfg *config.Config, code string) 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	// we did this to have a certain time-bound so that after sometime the request gets cancelled if the request takes too much time
+	var githubHTTPClient = &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	resp, err := githubHTTPClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("calling github token endpoint: %w", err)
 	}
@@ -81,7 +87,11 @@ func fetchGithubUser(ctx context.Context, accessToken string) (*GithubUser, erro
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 	req.Header.Set("Accept", "application/vnd.github+json")
 
-	resp, err := http.DefaultClient.Do(req)
+	var githubHTTPClient = &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	resp, err := githubHTTPClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("calling github user endpoint: %w", err)
 	}
@@ -123,11 +133,19 @@ func fetchGithubPrimaryEmail(ctx context.Context, accessToken string) (string, e
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 	req.Header.Set("Accept", "application/vnd.github+json")
 
-	resp, err := http.DefaultClient.Do(req)
+	var githubHTTPClient = &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	resp, err := githubHTTPClient.Do(req)
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("couldn't fetch primary email from github: %w", err)
+	}
 
 	var emails []struct {
 		Email    string `json:"email"`
