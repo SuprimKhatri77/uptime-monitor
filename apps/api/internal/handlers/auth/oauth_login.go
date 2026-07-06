@@ -13,7 +13,7 @@ import (
 	"github.com/suprimkhatri77/uptime-monitor/api/internal/utils"
 )
 
-func generateState() (string, error) {
+func generateRandomString() (string, error) {
 	b := make([]byte, 32)
 
 	if _, err := rand.Read(b); err != nil {
@@ -26,7 +26,7 @@ func generateState() (string, error) {
 func GithubLoginHandler(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		state, err := generateState()
+		state, err := generateRandomString()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, types.Error("Failed to process request", constants.InternalServerError))
 			return

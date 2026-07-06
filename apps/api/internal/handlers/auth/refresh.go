@@ -77,12 +77,18 @@ func Refresh(queries repository.AuthRepository, cfg *config.Config) gin.HandlerF
 			return
 		}
 
+		jti, err := generateRandomString()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, types.Error("Failed to process request", constants.InternalServerError))
+			return
+		}
 		accessClaims := jwt.MapClaims{
 			"user_id":    user.ID,
 			"role":       user.Role,
 			"email":      user.Email,
 			"name":       user.Name,
 			"avatar_url": user.AvatarUrl,
+			"jti":        jti,
 			"exp":        time.Now().Add(15 * time.Minute).Unix(),
 		}
 
@@ -111,6 +117,7 @@ func Refresh(queries repository.AuthRepository, cfg *config.Config) gin.HandlerF
 
 		refreshClaims := jwt.MapClaims{
 			"user_id": user.ID,
+			"jti":     jti,
 			"exp":     time.Now().Add(30 * 24 * time.Hour).Unix(),
 		}
 

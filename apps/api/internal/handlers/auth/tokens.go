@@ -17,6 +17,12 @@ import (
 
 func generateAccessAndRefreshToken(c *gin.Context, cfg *config.Config, user db.CoreUser, repo repository.AuthRepository) error {
 
+	// jti prevents two refresh/access tokens for the same user in the same second to not be identical
+	jti, err := generateRandomString()
+	if err != nil {
+		return fmt.Errorf("generating jti: %w", err)
+	}
+
 	// creating access claims
 	accessClaims := jwt.MapClaims{
 		"user_id":    user.ID,
@@ -24,6 +30,7 @@ func generateAccessAndRefreshToken(c *gin.Context, cfg *config.Config, user db.C
 		"role":       user.Role,
 		"name":       user.Name,
 		"avatar_url": user.AvatarUrl,
+		"jti":        jti,
 		"exp":        time.Now().Add(15 * time.Minute).Unix(),
 	}
 
@@ -36,6 +43,7 @@ func generateAccessAndRefreshToken(c *gin.Context, cfg *config.Config, user db.C
 	// creating refresh claims
 	refreshClaims := jwt.MapClaims{
 		"user_id": user.ID,
+		"jti":     jti,
 		"exp":     time.Now().Add(30 * 24 * time.Hour).Unix(),
 	}
 	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)

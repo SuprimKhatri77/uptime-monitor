@@ -144,7 +144,7 @@ func fetchGithubPrimaryEmail(ctx context.Context, accessToken string) (string, e
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("couldn't fetch primary email from github: %w", err)
+		return "", fmt.Errorf("github email endpoint returned status %d", resp.StatusCode)
 	}
 
 	var emails []struct {
