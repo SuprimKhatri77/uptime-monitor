@@ -73,7 +73,7 @@ func RequireAuth(cfg *config.Config) gin.HandlerFunc {
 		}
 
 		role, ok := claims["role"].(string)
-		if !ok || (role != "admin" && role != "superadmin" && role != "student") {
+		if !ok || (role != "superadmin" && role != "user") {
 			slog.Warn("invalid role in claims",
 				"user_id", userID,
 				"role", role,

@@ -9,12 +9,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/suprimkhatri77/uptime-monitor/api/internal/config"
 	"github.com/suprimkhatri77/uptime-monitor/api/internal/constants"
-	"github.com/suprimkhatri77/uptime-monitor/api/internal/packages/handlerlog"
 	"github.com/suprimkhatri77/uptime-monitor/api/internal/types"
 	"github.com/suprimkhatri77/uptime-monitor/api/internal/utils"
 )
 
-func generateState() (string, error) {
+func generateRandomString() (string, error) {
 	b := make([]byte, 32)
 
 	if _, err := rand.Read(b); err != nil {
@@ -27,7 +26,7 @@ func generateState() (string, error) {
 func GithubLoginHandler(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		state, err := generateState()
+		state, err := generateRandomString()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, types.Error("Failed to process request", constants.InternalServerError))
 			return
@@ -42,8 +41,6 @@ func GithubLoginHandler(cfg *config.Config) gin.HandlerFunc {
 		params.Set("state", state)
 
 		authURL := "https://github.com/login/oauth/authorize?" + params.Encode()
-
-		handlerlog.Info(c, "REDIRECTING TO: ", authURL)
 
 		c.Redirect(http.StatusTemporaryRedirect, authURL)
 	}

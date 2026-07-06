@@ -51,32 +51,6 @@ func Refresh(queries repository.AuthRepository, cfg *config.Config) gin.HandlerF
 			return
 		}
 
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok {
-			handlerlog.Warn(c, "invalid token claims")
-
-			c.JSON(http.StatusUnauthorized, types.Error("Invalid token", constants.InvalidToken))
-			return
-		}
-
-		sessionIDFromClaims, ok := claims["session_id"].(string)
-		if !ok {
-			utils.ClearAuthCookies(c, cfg)
-
-			c.JSON(http.StatusUnauthorized, types.Error("Invalid token claims", constants.InvalidToken))
-			return
-		}
-
-		handlerlog.Info(c, "session from claims", "session_id", sessionIDFromClaims)
-
-		sessionID, err := utils.ConvertToUUID(sessionIDFromClaims)
-		if err != nil {
-			utils.ClearAuthCookies(c, cfg)
-
-			c.JSON(http.StatusUnauthorized, types.Error("Invalid token claims", constants.InvalidToken))
-			return
-		}
-
 		refreshTokenHash := sha256.Sum256([]byte(refreshTokenString))
 		refreshTokenHashString := fmt.Sprintf("%x", refreshTokenHash)
 
@@ -103,12 +77,18 @@ func Refresh(queries repository.AuthRepository, cfg *config.Config) gin.HandlerF
 			return
 		}
 
+		jti, err := generateRandomString()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, types.Error("Failed to process request", constants.InternalServerError))
+			return
+		}
 		accessClaims := jwt.MapClaims{
 			"user_id":    user.ID,
 			"role":       user.Role,
 			"email":      user.Email,
 			"name":       user.Name,
 			"avatar_url": user.AvatarUrl,
+			"jti":        jti,
 			"exp":        time.Now().Add(15 * time.Minute).Unix(),
 		}
 
@@ -136,9 +116,9 @@ func Refresh(queries repository.AuthRepository, cfg *config.Config) gin.HandlerF
 		}
 
 		refreshClaims := jwt.MapClaims{
-			"user_id":    user.ID,
-			"session_id": sessionID,
-			"exp":        time.Now().Add(30 * 24 * time.Hour).Unix(),
+			"user_id": user.ID,
+			"jti":     jti,
+			"exp":     time.Now().Add(30 * 24 * time.Hour).Unix(),
 		}
 
 		newRefreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)
