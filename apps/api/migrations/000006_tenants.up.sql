@@ -7,3 +7,5 @@ CREATE TABLE core.tenants (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+

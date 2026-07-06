@@ -6,3 +6,6 @@ CREATE TABLE core.refresh_tokens (
     expires_at TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE INDEX idx_refresh_tokens_user_id ON core.refresh_tokens(user_id);
+CREATE UNIQUE INDEX idx_refresh_tokens_token_hash ON core.refresh_tokens(token_hash);

@@ -5,11 +5,13 @@ import (
 	"github.com/suprimkhatri77/uptime-monitor/api/internal/config"
 	db "github.com/suprimkhatri77/uptime-monitor/api/internal/database/generated"
 	"github.com/suprimkhatri77/uptime-monitor/api/internal/packages/cloudinary"
+	"github.com/suprimkhatri77/uptime-monitor/api/internal/repository"
 )
 
 type Config struct {
-	Config    *config.Config
-	Queries   *db.Queries
-	CldClient *cloudinary.Client
-	PgxPool   *pgxpool.Pool
+	Config     *config.Config
+	Queries    *db.Queries
+	CldClient  *cloudinary.Client
+	PgxPool    *pgxpool.Pool
+	AuthTxRepo repository.AuthTxRepository
 }

@@ -18,9 +18,12 @@ type Config struct {
 	CloudinaryAPIKey    string
 	CloudinaryAPISecret string
 	BootstrapSecret     string
-	FrontendUrl         string
+	FrontendURL         string
 	CookieDomain        string
 	OpenAPIPath         string
+	GithubClientID      string
+	GithubClientSecret  string
+	GithubRedirectURI   string
 }
 
 // Load loads .env from the current directory (if present) then reads configuration from environment variables.
@@ -50,7 +53,9 @@ func Load() (*Config, error) {
 	frontendUrl := os.Getenv("FRONTEND_URL")
 	cookieDomain := os.Getenv("COOKIE_DOMAIN")
 	openapiPath := os.Getenv("OPENAPI_PATH")
-
+	githubClientID := os.Getenv("GITHUB_CLIENT_ID")
+	githubClientSecret := os.Getenv("GITHUB_CLIENT_SECRET")
+	githubRedirectURI := os.Getenv("GITHUB_REDIRECT_URI")
 	return &Config{
 		Port:                port,
 		GinMode:             ginMode,
@@ -61,8 +66,11 @@ func Load() (*Config, error) {
 		CloudinaryAPIKey:    cloudinaryAPIKey,
 		CloudinaryAPISecret: cloudinaryAPISecret,
 		BootstrapSecret:     bootstrapSecret,
-		FrontendUrl:         frontendUrl,
+		FrontendURL:         frontendUrl,
 		CookieDomain:        cookieDomain,
 		OpenAPIPath:         openapiPath,
+		GithubClientID:      githubClientID,
+		GithubClientSecret:  githubClientSecret,
+		GithubRedirectURI:   githubRedirectURI,
 	}, nil
 }

@@ -10,3 +10,6 @@ WHERE id = $1;
 -- name: GetUserByEmail :one
 SELECT * FROM core.users
 WHERE email = $1;
+
+-- name: UserExists :one
+SELECT EXISTS (SELECT 1 FROM core.users WHERE email = $1);

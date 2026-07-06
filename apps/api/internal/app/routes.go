@@ -7,6 +7,7 @@ import (
 	dbgen "github.com/suprimkhatri77/uptime-monitor/api/internal/database/generated"
 	"github.com/suprimkhatri77/uptime-monitor/api/internal/middleware"
 	"github.com/suprimkhatri77/uptime-monitor/api/internal/packages/cloudinary"
+	"github.com/suprimkhatri77/uptime-monitor/api/internal/repository"
 	"github.com/suprimkhatri77/uptime-monitor/api/internal/routes"
 	routesconfig "github.com/suprimkhatri77/uptime-monitor/api/internal/routes/config"
 )
@@ -24,9 +25,10 @@ func buildRouter(cfg *config.Config, queries *dbgen.Queries, cld *cloudinary.Cli
 
 func buildRouteConfig(cfg *config.Config, queries *dbgen.Queries, cld *cloudinary.Client, db *database.DB) routesconfig.Config {
 	return routesconfig.Config{
-		Config:    cfg,
-		Queries:   queries,
-		CldClient: cld,
-		PgxPool:   db.Pool,
+		Config:     cfg,
+		Queries:    queries,
+		CldClient:  cld,
+		PgxPool:    db.Pool,
+		AuthTxRepo: repository.NewAuthTxRepository(queries, db.Pool),
 	}
 }

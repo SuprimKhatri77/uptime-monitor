@@ -6,3 +6,6 @@ CREATE TABLE core.tenant_members (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE(tenant_id, user_id)
 );
+
+CREATE INDEX idx_tenant_members_tenant_id ON core.tenant_members(tenant_id);
+CREATE INDEX idx_tenant_members_user_id ON core.tenant_members(user_id);

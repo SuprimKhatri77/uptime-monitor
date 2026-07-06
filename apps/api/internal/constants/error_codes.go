@@ -9,6 +9,7 @@ const (
 	InvalidIDFormat     = "INVALID_ID_FORMAT"
 	InvalidQueryParam   = "INVALID_QUERY_PARAM"
 	PageNotFound        = "PAGE_NOT_FOUND"
+	InvalidState        = "INVALID_STATE"
 
 	// auth
 	InvalidCredentials = "INVALID_CREDENTIALS"
