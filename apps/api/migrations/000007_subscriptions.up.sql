@@ -9,3 +9,5 @@ CREATE TABLE core.subscriptions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE INDEX idx_subscriptions_tenant_id ON core.subscriptions(tenant_id);

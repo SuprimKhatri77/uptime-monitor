@@ -38,6 +38,8 @@ func Logout(queries repository.AuthRepository, cfg *config.Config) gin.HandlerFu
 		if err != nil || !token.Valid {
 			handlerlog.Warn(c, "invalid refresh token on logout", "error", err)
 
+			utils.ClearAuthCookies(c, cfg)
+
 			c.JSON(http.StatusUnauthorized, types.Error("Invalid refresh token", constants.TokenInvalid))
 			return
 		}

@@ -6,3 +6,5 @@ CREATE TABLE core.accounts (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE(provider, provider_account_id)
 );
+
+CREATE INDEX idx_accounts_user_id ON core.accounts(user_id);
